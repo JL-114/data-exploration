@@ -62,7 +62,7 @@ if uploaded_file is not None:
     else:
         st.markdown("---")
         
-        # Section 2: Interactive Data Visualization
+        # 2b: Interactive Data Visualization
         st.header("Interactive Data Visualization")
         col1, col2 = st.columns(2)
         
@@ -89,7 +89,7 @@ if uploaded_file is not None:
             
         st.markdown("---")
 
-        # Section 3: Linear Regression Model & Custom Prediction
+        # 2c: Linear Regression Model & Custom Prediction
         st.header("Linear Regression Model & Custom Prediction")
         
         def get_input_params(series: pd.Series):
@@ -187,9 +187,9 @@ if uploaded_file is not None:
                 is_target_int = np.issubdtype(y.dtype, np.integer) or (clean_target % 1 == 0).all()
 
                 if is_target_int:
-                formatted_prediction = f"{round(prediction):,d}"
+                    formatted_prediction = f"{round(prediction):,d}"
                 else:
-                formatted_prediction = f"{prediction:,.2f}"
+                    formatted_prediction = f"{prediction:,.2f}"
 
                 with p_col1:
                     st.metric(label=f"Predicted {target}", value=formatted_prediction)
@@ -213,18 +213,17 @@ if uploaded_file is not None:
                         f"This model explains only **{max(0.0, adj_r2 * 100):.1f}%** of the variance in target output **{target}**. "
                         f"The selected features (**{feature_1}**, **{feature_2}**) fail to reliably predict **{target}**, so predictions are low quality and should not be relied upon."
                     )
-                    
+                
                 # Model Usage & Risk Notice Section
                 st.markdown("---")
                 st.subheader("Model Usage & Risk Notice")
                 
-                # 3. What model is used for and consequences of error
+                # Permanent Base Warning
                 st.info(
                     "This linear regression model is a simple prediction tool used to estimate unknown numerical outcomes based on mathematical relationships found between input features. "
                     "Because this is a simple two-feature model, predictions should **never be used solely for decision-making**. "
-                    "If predictions are wrong, relying on them can lead to flawed decision-making, poor strategy, and unmitigated financial/operational risk."
+                    "If predictions are wrong, relying on them can lead to flawed decision-making, poor strategy, and unmitigated financial risk."
                 )
-
 
 else:
     st.info("Please upload a CSV file with at least 3 numeric columns to get started.")
