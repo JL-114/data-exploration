@@ -106,7 +106,7 @@ if uploaded_file is not None:
                 input_df = pd.DataFrame([[val1, val2]], columns=[feature_1, feature_2])
                 prediction = model.predict(input_df)[0]
 
-               with p_col1:
+                with p_col1:
                     st.metric(label=f"Predicted {target}", value=f"{prediction:,.2f}")
 
         # 3: One sentence answering purpose and consequence of model error
