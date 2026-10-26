@@ -183,8 +183,6 @@ if uploaded_file is not None:
                 prediction = model.predict(input_df)[0]
 
                 with p_col1:
-                    st.metric(label=f"Predicted {target}", value=f"{prediction:,.2f}")
-                    
                 # Dynamically format prediction as integer or continuous float based on target type
                 clean_target = y.dropna()
                 is_target_int = np.issubdtype(y.dtype, np.integer) or (clean_target % 1 == 0).all()
