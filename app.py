@@ -76,16 +76,20 @@ if uploaded_file is not None:
             else:
                 x_col = st.selectbox("Select Column for Histogram", numeric_cols, index=0)
         
-        # Render chart dynamically using Plotly with 650px height
-        if chart_type == "Histogram":
-            fig = px.histogram(df, x=x_col, title=f"Histogram of {x_col}")
-        elif chart_type == "Line":
-            fig = px.line(df, x=x_col, y=y_col, title=f"Line Chart: {y_col} vs {x_col}")
-        elif chart_type == "Scatter":
-            fig = px.scatter(df, x=x_col, y=y_col, title=f"Scatter Plot: {y_col} vs {x_col}")
-            
-        fig.update_layout(height=650)
-        st.plotly_chart(fig, use_container_width=True)
+        # Validation: Ensure X and Y are distinct for Scatter and Line charts
+        if chart_type in ["Line", "Scatter"] and x_col == y_col:
+            st.warning("Please select two distinct columns for the X and Y axes.")
+        else:
+            # Render chart dynamically using Plotly with distinct colors
+            if chart_type == "Histogram":
+                fig = px.histogram(df, x=x_col, title=f"Histogram of {x_col}", color_discrete_sequence=["blue"])
+            elif chart_type == "Line":
+                fig = px.line(df, x=x_col, y=y_col, title=f"Line Chart: {y_col} vs {x_col}", color_discrete_sequence=["red"])
+            elif chart_type == "Scatter":
+                fig = px.scatter(df, x=x_col, y=y_col, title=f"Scatter Plot: {y_col} vs {x_col}", color_discrete_sequence=["black"])
+                
+            fig.update_layout(height=650)
+            st.plotly_chart(fig, use_container_width=True)
             
         st.markdown("---")
 
@@ -197,19 +201,19 @@ if uploaded_file is not None:
                 # Optional Dynamic Threshold Context
                 if adj_r2 >= 0.75:
                     st.success(
-                        f"**Optional Fit Context — High Model Fit.**"
+                        f"**Optional Fit Context — High Model Fit.** "
                         f"This model explains **{adj_r2 * 100:.1f}%** of the variance in target output **{target}**. "
                         f"While this offers strong baseline reference context for **{target}**, remember that MAE = **{mae:,.2f}** and predictions should complement, not replace, domain expertise."
                     )
                 elif adj_r2 >= 0.50:
                     st.warning(
-                        f"**Optional Fit Context — Moderate Model Fit.**"
+                        f"**Optional Fit Context — Moderate Model Fit.** "
                         f"This model explains **{adj_r2 * 100:.1f}%** of the variance in target output **{target}**. "
                         f"Predictions may provide optional directional reference for **{target}**, but should be treated cautiously given the moderate error margin (MAE = **{mae:,.2f}**)."
                     )
                 else:
                     st.error(
-                        f"**Optional Fit Context — Low Model Fit.**"
+                        f"**Optional Fit Context — Low Model Fit.** "
                         f"This model explains only **{max(0.0, adj_r2 * 100):.1f}%** of the variance in target output **{target}**. "
                         f"The selected features (**{feature_1}**, **{feature_2}**) fail to reliably predict **{target}**, so predictions are low quality and should not be relied upon."
                     )
