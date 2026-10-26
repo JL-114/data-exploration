@@ -3,12 +3,11 @@ import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-import statsmodels.api as sm
 import plotly.express as px
 
 st.set_page_config(page_title="CSV Data Explorer & Predictor", layout="wide")
 
-st.title("Data Explorer & Simple Predictions")
+st.title("Data Explorer & Preliminary Predictor")
 
 # Helper function to auto-clean currency/formatted columns into numeric floats
 def preprocess_dataframe(df_input: pd.DataFrame) -> pd.DataFrame:
@@ -21,7 +20,7 @@ def preprocess_dataframe(df_input: pd.DataFrame) -> pd.DataFrame:
         # Check for accounting negative format: ($1,234) -> -1234
         is_paren_neg = s_raw.str.startswith('(') & s_raw.str.endswith(')')
         
-        # Strip all non-numeric characters except digits, dots, and minus signs
+        # Strip non-numeric characters except digits, dots, and minus signs
         s_clean = s_raw.str.replace(r'[^\d.-]', '', regex=True)
         numeric_test = pd.to_numeric(s_clean, errors='coerce')
         
@@ -38,8 +37,8 @@ def preprocess_dataframe(df_input: pd.DataFrame) -> pd.DataFrame:
 
     return df_clean
 
-# 2a: Let the user upload any CSV file and display a preview
-st.header("Upload Dataset")
+# Step 1: Upload Dataset
+st.header("Step 1. Upload Dataset")
 uploaded_file = st.file_uploader("Upload any CSV file (must contain at least 3 numeric columns)", type=["csv"])
 
 if uploaded_file is not None:
@@ -49,7 +48,7 @@ if uploaded_file is not None:
     df = preprocess_dataframe(raw_df)
     
     st.subheader("Data Preview")
-    st.dataframe(df.head(10))
+    st.dataframe(df.head(10), use_container_width=True)
     
     # Automatically detect all numeric columns
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
@@ -63,155 +62,180 @@ if uploaded_file is not None:
     else:
         st.markdown("---")
         
-        # 2b: Choose column and chart type (line, scatter, histogram)
-        st.header("Interactive Data Visualization")
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            chart_type = st.selectbox("Select Chart Type", ["Scatter", "Histogram", "Line"])
+        # Section 2: Interactive Data Visualization (Expanded by default)
+        with st.expander("📊 2. Interactive Data Visualization", expanded=True):
+            col1, col2 = st.columns(2)
             
-        with col2:
-            if chart_type in ["Line", "Scatter"]:
-                x_col = st.selectbox("Select X Axis Column", numeric_cols, index=0)
-                y_col = st.selectbox("Select Y Axis Column", numeric_cols, index=1)
-            else:
-                x_col = st.selectbox("Select Column for Histogram", numeric_cols, index=0)
-        
-        # Render chart dynamically using Plotly
-        if chart_type == "Histogram":
-            fig = px.histogram(df, x=x_col, title=f"Histogram of {x_col}")
-            st.plotly_chart(fig, use_container_width=True)
-        elif chart_type == "Line":
-            fig = px.line(df, x=x_col, y=y_col, title=f"Line Chart: {y_col} vs {x_col}")
-            st.plotly_chart(fig, use_container_width=True)
-        elif chart_type == "Scatter":
-            fig = px.scatter(df, x=x_col, y=y_col, title=f"Scatter Plot: {y_col} vs {x_col}")
+            with col1:
+                chart_type = st.selectbox("Select Chart Type", ["Scatter", "Histogram", "Line"])
+                
+            with col2:
+                if chart_type in ["Line", "Scatter"]:
+                    x_col = st.selectbox("Select X Axis Column", numeric_cols, index=0)
+                    y_col = st.selectbox("Select Y Axis Column", numeric_cols, index=1)
+                else:
+                    x_col = st.selectbox("Select Column for Histogram", numeric_cols, index=0)
+            
+            # Render chart dynamically using Plotly with increased height (650px)
+            if chart_type == "Histogram":
+                fig = px.histogram(df, x=x_col, title=f"Histogram of {x_col}")
+            elif chart_type == "Line":
+                fig = px.line(df, x=x_col, y=y_col, title=f"Line Chart: {y_col} vs {x_col}")
+            elif chart_type == "Scatter":
+                fig = px.scatter(df, x=x_col, y=y_col, title=f"Scatter Plot: {y_col} vs {x_col}")
+                
+            fig.update_layout(height=650)
             st.plotly_chart(fig, use_container_width=True)
             
         st.markdown("---")
-        
-        # 2c: Choose two inputs + target, fit linear regression, predict user values
-        st.header("Linear Regression Model & Custom Prediction")
-        
-        # Helper function defined directly in Section 3 right before prediction input rendering
-        def get_input_params(series: pd.Series):
-            clean_s = series.dropna()
-            if clean_s.empty:
-                return 0.1, "%.2f", None, None
-            
-            unique_vals = set(clean_s.unique())
-            is_binary = unique_vals.issubset({0, 1, 0.0, 1.0})
-            is_int = np.issubdtype(series.dtype, np.integer) or (clean_s % 1 == 0).all()
-            
-            if is_binary:
-                return 1.0, "%.0f", 0.0, 1.0
-            elif is_int:
-                return 1.0, "%.0f", None, None
-            else:
-                return 0.01, "%.2f", None, None
 
-        reg_col1, reg_col2 = st.columns(2)
-        with reg_col1:
-            target = st.selectbox("Select Target Variable (Output)", numeric_cols, index=2)
-        with reg_col2:
-            feature_1 = st.selectbox("Select Feature 1 (Input 1)", numeric_cols, index=0)
-            feature_2 = st.selectbox("Select Feature 2 (Input 2)", numeric_cols, index=1)
+        # Variables to track model state for requirement 3
+        model_trained = False
+        adj_r2_val = 0.0
+        mae_val = 0.0
+        target_var = ""
+        feat1_var = ""
+        feat2_var = ""
+
+        # Section 3: Linear Regression Model & Custom Prediction (Collapsed by default)
+        with st.expander("🤖 3. Linear Regression Model & Custom Prediction", expanded=False):
             
-        # Feature validation checks
-        if feature_1 == feature_2:
-            st.warning("Please select two distinct input features.")
-        elif target in [feature_1, feature_2]:
-            st.warning("The target output variable must be different from the selected input features.")
-        else:
-            # Clean missing data for selected variables
-            clean_df = df[[feature_1, feature_2, target]].dropna()
-            
-            if len(clean_df) < 2:
-                st.error("Insufficient complete data rows to fit a linear regression model.")
+            def get_input_params(series: pd.Series):
+                clean_s = series.dropna()
+                if clean_s.empty:
+                    return 0.1, "%.2f", None, None
+                
+                unique_vals = set(clean_s.unique())
+                is_binary = unique_vals.issubset({0, 1, 0.0, 1.0})
+                is_int = np.issubdtype(series.dtype, np.integer) or (clean_s % 1 == 0).all()
+                
+                if is_binary:
+                    return 1.0, "%.0f", 0.0, 1.0
+                elif is_int:
+                    return 1.0, "%.0f", None, None
+                else:
+                    return 0.01, "%.2f", None, None
+
+            reg_col1, reg_col2 = st.columns(2)
+            with reg_col1:
+                target = st.selectbox("Select Target Variable (Output)", numeric_cols, index=2)
+            with reg_col2:
+                feature_1 = st.selectbox("Select Feature 1 (Input 1)", numeric_cols, index=0)
+                feature_2 = st.selectbox("Select Feature 2 (Input 2)", numeric_cols, index=1)
+                
+            # Feature validation checks
+            if feature_1 == feature_2:
+                st.warning("Please select two distinct input features.")
+            elif target in [feature_1, feature_2]:
+                st.warning("The target output variable must be different from the selected input features.")
             else:
-                X = clean_df[[feature_1, feature_2]]
-                y = clean_df[target]
+                # Clean missing data for selected variables
+                clean_df = df[[feature_1, feature_2, target]].dropna()
                 
-                # Fit Linear Regression Model for prediction
-                model = LinearRegression()
-                model.fit(X, y)
-                y_pred = model.predict(X)
-                
-                # Fit statsmodels OLS for statistical metrics (Adjusted R², Intercept, Coefficients, p-values)
-                X_with_const = sm.add_constant(X)
-                ols_model = sm.OLS(y, X_with_const).fit()
-                
-                # Calculate evaluation metrics
-                r2 = ols_model.rsquared
-                adj_r2 = ols_model.rsquared_adj
-                mae = mean_absolute_error(y, y_pred)
-                mse = mean_squared_error(y, y_pred)
-                rmse = np.sqrt(mse)
-                
-                # Display 5 evaluation metrics in columns
-                st.subheader("Model Evaluation Metrics")
-                m_col1, m_col2, m_col3, m_col4, m_col5 = st.columns(5)
-                m_col1.metric("R² Score", f"{r2:.3f}")
-                m_col2.metric("Adjusted R²", f"{adj_r2:.3f}")
-                m_col3.metric("MAE", f"{mae:,.3f}")
-                m_col4.metric("MSE", f"{mse:,.3f}")
-                m_col5.metric("RMSE", f"{rmse:,.3f}")
-                
-                # Display Coefficients, Intercept, and p-values in a table
-                st.subheader("Model Coefficients & Feature Significance")
-                summary_data = {
-                    "Variable": ["Intercept (Constant)", feature_1, feature_2],
-                    "Coefficient": [ols_model.params['const'], ols_model.params[feature_1], ols_model.params[feature_2]],
-                    "p-value": [ols_model.pvalues['const'], ols_model.pvalues[feature_1], ols_model.pvalues[feature_2]],
-                    "Significant (p < 0.05)": [
-                        "Yes" if ols_model.pvalues['const'] < 0.05 else "No",
-                        "Yes" if ols_model.pvalues[feature_1] < 0.05 else "No",
-                        "Yes" if ols_model.pvalues[feature_2] < 0.05 else "No"
-                    ]
-                }
-                summary_df = pd.DataFrame(summary_data)
-                
-                # Format numeric output for readability
-                summary_df["Coefficient"] = summary_df["Coefficient"].map("{:,.4f}".format)
-                summary_df["p-value"] = summary_df["p-value"].map("{:.4f}".format)
-                
-                st.dataframe(summary_df, hide_index=True, use_container_width=True)
-                
-                # Predict user values with dynamic step, bounds, and formatting per column
-                st.subheader("Type Input Values to Generate Prediction")
-                p_col1, p_col2 = st.columns(2)
-                 
-                with p_col2:
-                    step1, fmt1, min1, max1 = get_input_params(X[feature_1])
-                    step2, fmt2, min2, max2 = get_input_params(X[feature_2])
+                if len(clean_df) <= 3:
+                    st.error("Insufficient complete data rows to fit a linear regression model.")
+                else:
+                    X = clean_df[[feature_1, feature_2]]
+                    y = clean_df[target]
                     
-                    val1 = st.number_input(
-                        f"Enter value for '{feature_1}'", 
-                        value=float(X[feature_1].median()), 
-                        min_value=min1,
-                        max_value=max1,
-                        step=step1, 
-                        format=fmt1
-                    )
-                    val2 = st.number_input(
-                        f"Enter value for '{feature_2}'", 
-                        value=float(X[feature_2].median()), 
-                        min_value=min2,
-                        max_value=max2,
-                        step=step2, 
-                        format=fmt2
-                    )
-                 
-                input_df = pd.DataFrame([[val1, val2]], columns=X.columns)
-                prediction = model.predict(input_df)[0]
+                    # Fit Linear Regression Model for prediction
+                    model = LinearRegression()
+                    model.fit(X, y)
+                    y_pred = model.predict(X)
+                    
+                    # Calculate evaluation metrics using scikit-learn & numpy
+                    r2 = r2_score(y, y_pred)
+                    n = len(y)
+                    k = X.shape[1]
+                    adj_r2 = 1 - (1 - r2) * (n - 1) / (n - k - 1)
+                    
+                    mae = mean_absolute_error(y, y_pred)
+                    mse = mean_squared_error(y, y_pred)
+                    rmse = np.sqrt(mse)
+                    
+                    # Store variables for requirement 3 dynamic notice
+                    model_trained = True
+                    adj_r2_val = adj_r2
+                    mae_val = mae
+                    target_var = target
+                    feat1_var = feature_1
+                    feat2_var = feature_2
 
-                with p_col1:
-                    st.metric(label=f"Predicted {target}", value=f"{prediction:,.2f}")
+                    # Display 5 evaluation metrics in columns
+                    st.subheader("Model Evaluation Metrics")
+                    m_col1, m_col2, m_col3, m_col4, m_col5 = st.columns(5)
+                    m_col1.metric("R² Score", f"{r2:.3f}")
+                    m_col2.metric("Adjusted R²", f"{adj_r2:.3f}")
+                    m_col3.metric("MAE", f"{mae:,.3f}")
+                    m_col4.metric("MSE", f"{mse:,.3f}")
+                    m_col5.metric("RMSE", f"{rmse:,.3f}")
+                    
+                    # Predict user values with dynamic step, bounds, and formatting per column
+                    st.subheader("Type Input Values to Generate Prediction")
+                    p_col1, p_col2 = st.columns(2)
+                     
+                    with p_col2:
+                        step1, fmt1, min1, max1 = get_input_params(X[feature_1])
+                        step2, fmt2, min2, max2 = get_input_params(X[feature_2])
+                        
+                        val1 = st.number_input(
+                            f"Enter value for '{feature_1}'", 
+                            value=float(X[feature_1].median()), 
+                            min_value=min1,
+                            max_value=max1,
+                            step=step1, 
+                            format=fmt1
+                        )
+                        val2 = st.number_input(
+                            f"Enter value for '{feature_2}'", 
+                            value=float(X[feature_2].median()), 
+                            min_value=min2,
+                            max_value=max2,
+                            step=step2, 
+                            format=fmt2
+                        )
+                     
+                    input_df = pd.DataFrame([[val1, val2]], columns=X.columns)
+                    prediction = model.predict(input_df)[0]
 
-        # 3: One sentence answering purpose and consequence of model error
+                    with p_col1:
+                        st.metric(label=f"Predicted {target}", value=f"{prediction:,.2f}")
+
+        # Requirement 3: Base Notice + Optional 3-Tier Dynamic Threshold Guidance
         st.markdown("---")
         st.subheader("Model Usage & Risk Notice")
-        st.info("This linear regression model is used to estimate unknown numerical outcomes based on mathematical relationships found between input features; if predictions are wrong, relying on them can lead to flawed decision-making, poor strategy, and unmitigated financial risk.")
+        
+        # Permanent Base Warning
+        st.info(
+            "This linear regression model is a simple prediction tool used to estimate unknown numerical outcomes based on mathematical relationships found between input features. "
+            "Because this is a simple two-feature model, predictions should **never be used solely for decision-making**. "
+            "If predictions are wrong, relying on them can lead to flawed decision-making, poor strategy, and unmitigated financial risk."
+        )
+
+        # Optional Dynamic Threshold Context
+        if model_trained:
+            if adj_r2_val >= 0.75:
+                # Green callout box (st.success)
+                st.success(
+                    f"**Optional Fit Context — High Model Fit (Adjusted R² = {adj_r2_val:.2f})**  \n"
+                    f"This model explains **{adj_r2_val * 100:.1f}%** of the variance in target output **{target_var}**. "
+                    f"While this offers strong baseline reference context for **{target_var}**, remember that MAE = **{mae_val:,.2f}** and predictions should complement, not replace, domain expertise."
+                )
+            elif adj_r2_val >= 0.50:
+                # Amber callout box (st.warning)
+                st.warning(
+                    f"**Optional Fit Context — Moderate Model Fit (Adjusted R² = {adj_r2_val:.2f})**  \n"
+                    f"This model explains **{adj_r2_val * 100:.1f}%** of the variance in target output **{target_var}**. "
+                    f"Predictions may provide optional directional reference for **{target_var}**, but should be treated cautiously given the moderate error margin (MAE = **{mae_val:,.2f}**)."
+                )
+            else:
+                # Red callout box (st.error)
+                st.error(
+                    f"**Optional Fit Context — Low Model Fit (Adjusted R² = {max(0.0, adj_r2_val):.2f})**  \n"
+                    f"This model explains only **{max(0.0, adj_r2_val * 100):.1f}%** of the variance in target output **{target_var}**. "
+                    f"The selected features (**{feat1_var}**, **{feat2_var}**) fail to reliably predict **{target_var}**, so predictions are low quality and should not be relied upon."
+                )
 
 else:
     st.info("Please upload a CSV file with at least 3 numeric columns to get started.")
+
