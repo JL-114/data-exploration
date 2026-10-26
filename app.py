@@ -71,8 +71,8 @@ if uploaded_file is not None:
             
         with col2:
             if chart_type in ["Line", "Scatter"]:
-                x_col = st.selectbox("Select X Axis Column", numeric_cols, index=0)
                 y_col = st.selectbox("Select Y Axis Column", numeric_cols, index=1)
+                x_col = st.selectbox("Select X Axis Column", numeric_cols, index=0)
             else:
                 x_col = st.selectbox("Select Column for Histogram", numeric_cols, index=0)
         
