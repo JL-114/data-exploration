@@ -188,19 +188,19 @@ if uploaded_file is not None:
                 # Optional Dynamic Threshold Context
                 if adj_r2 >= 0.75:
                     st.success(
-                        f"**Optional Fit Context — High Model Fit (Adjusted R² = {adj_r2:.2f})** \n"
+                        f"**Optional Fit Context — High Model Fit.**"
                         f"This model explains **{adj_r2 * 100:.1f}%** of the variance in target output **{target}**. "
                         f"While this offers strong baseline reference context for **{target}**, remember that MAE = **{mae:,.2f}** and predictions should complement, not replace, domain expertise."
                     )
                 elif adj_r2 >= 0.50:
                     st.warning(
-                        f"**Optional Fit Context — Moderate Model Fit (Adjusted R² = {adj_r2:.2f})** \n"
+                        f"**Optional Fit Context — Moderate Model Fit.**"
                         f"This model explains **{adj_r2 * 100:.1f}%** of the variance in target output **{target}**. "
                         f"Predictions may provide optional directional reference for **{target}**, but should be treated cautiously given the moderate error margin (MAE = **{mae:,.2f}**)."
                     )
                 else:
                     st.error(
-                        f"**Optional Fit Context — Low Model Fit (Adjusted R² = {max(0.0, adj_r2):.2f})** \n"
+                        f"**Optional Fit Context — Low Model Fit.**"
                         f"This model explains only **{max(0.0, adj_r2 * 100):.1f}%** of the variance in target output **{target}**. "
                         f"The selected features (**{feature_1}**, **{feature_2}**) fail to reliably predict **{target}**, so predictions are low quality and should not be relied upon."
                     )
