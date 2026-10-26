@@ -101,13 +101,13 @@ if uploaded_file is not None:
                 
                 with p_col1:
                     val1 = st.number_input(f"Enter value for '{feature_1}'", value=float(X[feature_1].median()))
-                with p_col2:
                     val2 = st.number_input(f"Enter value for '{feature_2}'", value=float(X[feature_2].median()))
-                    
+                 
                 input_df = pd.DataFrame([[val1, val2]], columns=[feature_1, feature_2])
                 prediction = model.predict(input_df)[0]
-                
-                st.metric(label=f"Predicted {target}", value=f"{prediction:,.2f}")
+             
+                with p_col2:
+                    st.metric(label=f"Predicted {target}", value=f"{prediction:,.2f}")
 
         # 3: One sentence answering purpose and consequence of model error
         st.markdown("---")
