@@ -64,10 +64,10 @@ if uploaded_file is not None:
         
         reg_col1, reg_col2 = st.columns(2)
         with reg_col1:
+            target = st.selectbox("Select Target Variable (Output)", numeric_cols, index=2)
+        with reg_col2:
             feature_1 = st.selectbox("Select Feature 1 (Input 1)", numeric_cols, index=0)
             feature_2 = st.selectbox("Select Feature 2 (Input 2)", numeric_cols, index=1)
-        with reg_col2:
-            target = st.selectbox("Select Target Variable (Output)", numeric_cols, index=2)
             
         # Feature validation checks
         if feature_1 == feature_2:
