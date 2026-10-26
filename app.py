@@ -184,6 +184,18 @@ if uploaded_file is not None:
 
                 with p_col1:
                     st.metric(label=f"Predicted {target}", value=f"{prediction:,.2f}")
+                    
+                # Dynamically format prediction as integer or continuous float based on target type
+                clean_target = y.dropna()
+                is_target_int = np.issubdtype(y.dtype, np.integer) or (clean_target % 1 == 0).all()
+
+                if is_target_int:
+                    formatted_prediction = f"{round(prediction):,d}"
+                else:
+                    formatted_prediction = f"{prediction:,.2f}"
+
+                with p_col1:
+                    st.metric(label=f"Predicted {target}", value=formatted_prediction)
 
                 # Optional Dynamic Threshold Context
                 if adj_r2 >= 0.75:
