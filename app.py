@@ -22,6 +22,9 @@ if uploaded_file is not None:
     
     # Automatically detect numeric columns
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+
+    # Added line highlighting detected numeric columns during preview
+    st.info(f"**Detected Numeric Columns ({len(numeric_cols)}):** {', '.join(numeric_cols)}")
     
     # Validate requirement of at least 3 numeric columns
     if len(numeric_cols) < 3:
@@ -112,4 +115,4 @@ if uploaded_file is not None:
         st.info("This linear regression model is used to estimate unknown numerical outcomes based on mathematical relationships found between input features; if predictions are wrong, relying on them can lead to flawed decision-making, poor strategy, and unmitigated financial risk.")
 
 else:
-    st.info("👆 Please upload a CSV file with at least 3 numeric columns to get started.")
+    st.info("Please upload a CSV file with at least 3 numeric columns to get started.")
