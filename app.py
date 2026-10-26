@@ -39,7 +39,7 @@ def preprocess_dataframe(df_input: pd.DataFrame) -> pd.DataFrame:
     return df_clean
 
 # Requirement 2a: Let the user upload any CSV file and display a preview
-st.header("Step 1. Upload Dataset")
+st.header("Upload Dataset")
 uploaded_file = st.file_uploader("Upload any CSV file (must contain at least 3 numeric columns)", type=["csv"])
 
 if uploaded_file is not None:
@@ -64,7 +64,7 @@ if uploaded_file is not None:
         st.markdown("---")
         
         # Requirement 2b: Choose column and chart type (line, scatter, histogram)
-        st.header("2. Interactive Data Visualization")
+        st.header("Interactive Data Visualization")
         col1, col2 = st.columns(2)
         
         with col1:
@@ -91,7 +91,7 @@ if uploaded_file is not None:
         st.markdown("---")
         
         # Requirement 2c: Choose two inputs + target, fit linear regression, predict user values
-        st.header("3. Linear Regression Model & Custom Prediction")
+        st.header("Linear Regression Model & Custom Prediction")
         
         # Helper function defined directly in Section 3 right before prediction input rendering
         def get_input_params(series: pd.Series):
