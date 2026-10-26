@@ -8,7 +8,7 @@ import plotly.express as px
 
 st.set_page_config(page_title="CSV Data Explorer & Predictor", layout="wide")
 
-st.title("Data Explorer & Preliminary Predictor")
+st.title("Data Explorer & Simple Predictions")
 
 # Helper function to auto-clean currency/formatted columns into numeric floats
 def preprocess_dataframe(df_input: pd.DataFrame) -> pd.DataFrame:
@@ -38,7 +38,7 @@ def preprocess_dataframe(df_input: pd.DataFrame) -> pd.DataFrame:
 
     return df_clean
 
-# Requirement 2a: Let the user upload any CSV file and display a preview
+# 2a: Let the user upload any CSV file and display a preview
 st.header("Upload Dataset")
 uploaded_file = st.file_uploader("Upload any CSV file (must contain at least 3 numeric columns)", type=["csv"])
 
@@ -63,7 +63,7 @@ if uploaded_file is not None:
     else:
         st.markdown("---")
         
-        # Requirement 2b: Choose column and chart type (line, scatter, histogram)
+        # 2b: Choose column and chart type (line, scatter, histogram)
         st.header("Interactive Data Visualization")
         col1, col2 = st.columns(2)
         
@@ -90,7 +90,7 @@ if uploaded_file is not None:
             
         st.markdown("---")
         
-        # Requirement 2c: Choose two inputs + target, fit linear regression, predict user values
+        # 2c: Choose two inputs + target, fit linear regression, predict user values
         st.header("Linear Regression Model & Custom Prediction")
         
         # Helper function defined directly in Section 3 right before prediction input rendering
@@ -208,7 +208,7 @@ if uploaded_file is not None:
                 with p_col1:
                     st.metric(label=f"Predicted {target}", value=f"{prediction:,.2f}")
 
-        # Requirement 3: One sentence answering purpose and consequence of model error
+        # 3: One sentence answering purpose and consequence of model error
         st.markdown("---")
         st.subheader("Model Usage & Risk Notice")
         st.info("This linear regression model is used to estimate unknown numerical outcomes based on mathematical relationships found between input features; if predictions are wrong, relying on them can lead to flawed decision-making, poor strategy, and unmitigated financial risk.")
