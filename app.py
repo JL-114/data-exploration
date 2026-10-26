@@ -10,59 +10,48 @@ st.set_page_config(page_title="CSV Data Explorer & Predictor", layout="wide")
 
 st.title("Data Explorer & Preliminary Predictor")
 
-#Helper functions
-#Ensure datasets with monetary values are read through as numeric columns
+# Helper function to auto-clean currency/formatted columns into numeric floats
 def preprocess_dataframe(df_input: pd.DataFrame) -> pd.DataFrame:
     df_clean = df_input.copy()
-    for col in df_clean.select_dtypes(include=['object']).columns:
-        # Strip $, commas, and whitespace
-        s_clean = df_clean[col].astype(str).str.replace(r'[\$,\s]', '', regex=True)
-        numeric_s = pd.to_numeric(s_clean, errors='coerce')
-        valid_count = df_clean[col].notnull().sum()
-        # If >80% of non-null values convert to numbers, treat column as numeric
-        if valid_count > 0 and (numeric_s.notnull().sum() / valid_count) > 0.8:
-            df_clean[col] = numeric_s
-    return df_clean
-    
-# Detect binary columns and dynamically change step sizes for numeric values, display format, and min/max bounds per column
-def get_input_params(series: pd.Series):
-    clean_s = series.dropna()
-    if clean_s.empty:
-        return 0.1, "%.2f", None, None
-    
-    unique_vals = set(clean_s.unique())
-    is_binary = unique_vals.issubset({0, 1, 0.0, 1.0})
-    is_int = np.issubdtype(series.dtype, np.integer) or (clean_s % 1 == 0).all()
-    
-    if is_binary:
-        step = 1.0
-        fmt = "%.0f"
-        min_val = 0.0
-        max_val = 1.0
-    elif is_int:
-        step = 1.0
-        fmt = "%.0f"
-        min_val = None
-        max_val = None
-    else:
-        step = 0.01
-        fmt = "%.2f"
-        min_val = None
-        max_val = None
+    for col in df_clean.select_dtypes(include=['object', 'string']).columns:
+        s_raw = df_clean[col].dropna().astype(str).str.strip()
+        if s_raw.empty:
+            continue
+            
+        # Check for accounting negative format: ($1,234) -> -1234
+        is_paren_neg = s_raw.str.startswith('(') & s_raw.str.endswith(')')
         
-    return step, fmt, min_val, max_val
+        # Strip all non-numeric characters except digits, dots, and minus signs
+        s_clean = s_raw.str.replace(r'[^\d.-]', '', regex=True)
+        numeric_test = pd.to_numeric(s_clean, errors='coerce')
+        
+        # Convert column if >= 70% of non-null strings become valid numbers
+        if len(s_raw) > 0 and (numeric_test.notnull().sum() / len(s_raw)) >= 0.7:
+            s_full = df_clean[col].astype(str).str.strip()
+            full_paren_neg = s_full.str.startswith('(') & s_full.str.endswith(')')
+            full_clean = s_full.str.replace(r'[^\d.-]', '', regex=True)
+            
+            converted_series = pd.to_numeric(full_clean, errors='coerce')
+            converted_series[full_paren_neg] = -converted_series[full_paren_neg].abs()
+            
+            df_clean[col] = converted_series
 
-# 2a: Let the user upload any CSV file and display a preview
+    return df_clean
+
+# Requirement 2a: Let the user upload any CSV file and display a preview
 st.header("Step 1. Upload Dataset")
 uploaded_file = st.file_uploader("Upload any CSV file (must contain at least 3 numeric columns)", type=["csv"])
 
 if uploaded_file is not None:
-    df = pd.read_csv(uploaded_file)
+    raw_df = pd.read_csv(uploaded_file)
+    
+    # Clean currency and formatted text columns immediately upon upload
+    df = preprocess_dataframe(raw_df)
     
     st.subheader("Data Preview")
     st.dataframe(df.head(10))
     
-    # Automatically detect numeric columns
+    # Automatically detect all numeric columns
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
 
     # Highlight detected numeric columns during preview
@@ -74,7 +63,7 @@ if uploaded_file is not None:
     else:
         st.markdown("---")
         
-        # 2b: Choose column and chart type (line, scatter, histogram)
+        # Requirement 2b: Choose column and chart type (line, scatter, histogram)
         st.header("2. Interactive Data Visualization")
         col1, col2 = st.columns(2)
         
@@ -101,9 +90,26 @@ if uploaded_file is not None:
             
         st.markdown("---")
         
-        # 2c: Choose two inputs + target, fit linear regression, predict user values
+        # Requirement 2c: Choose two inputs + target, fit linear regression, predict user values
         st.header("3. Linear Regression Model & Custom Prediction")
         
+        # Helper function defined directly in Section 3 right before prediction input rendering
+        def get_input_params(series: pd.Series):
+            clean_s = series.dropna()
+            if clean_s.empty:
+                return 0.1, "%.2f", None, None
+            
+            unique_vals = set(clean_s.unique())
+            is_binary = unique_vals.issubset({0, 1, 0.0, 1.0})
+            is_int = np.issubdtype(series.dtype, np.integer) or (clean_s % 1 == 0).all()
+            
+            if is_binary:
+                return 1.0, "%.0f", 0.0, 1.0
+            elif is_int:
+                return 1.0, "%.0f", None, None
+            else:
+                return 0.01, "%.2f", None, None
+
         reg_col1, reg_col2 = st.columns(2)
         with reg_col1:
             target = st.selectbox("Select Target Variable (Output)", numeric_cols, index=2)
@@ -202,7 +208,7 @@ if uploaded_file is not None:
                 with p_col1:
                     st.metric(label=f"Predicted {target}", value=f"{prediction:,.2f}")
 
-        # 3: One sentence answering purpose and consequence of model error
+        # Requirement 3: One sentence answering purpose and consequence of model error
         st.markdown("---")
         st.subheader("Model Usage & Risk Notice")
         st.info("This linear regression model is used to estimate unknown numerical outcomes based on mathematical relationships found between input features; if predictions are wrong, relying on them can lead to flawed decision-making, poor strategy, and unmitigated financial risk.")
